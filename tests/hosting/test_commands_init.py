@@ -31,3 +31,19 @@ async def test_sets_menu_button_and_per_language_commands():
     assert "en" in langs and "ru" in langs
     # default (language_code=None) uses the English set
     assert (None, ["start"]) in bot.commands
+
+
+async def test_falls_back_when_no_english():
+    """Provider omitting 'en' must not raise; default falls back to the first available language."""
+
+    class DeProvider:
+        def get_chat_menu_buttons_by_language_code(self):
+            return {"de": [BotCommand(command="start", description="Start")]}
+
+    bot = FakeBot()
+    await set_bot_commands(bot, DeProvider())
+    assert bot.menu_button_set
+    langs = [lang for lang, _ in bot.commands]
+    assert "de" in langs
+    # default (language_code=None) must be set to something (the only available set)
+    assert (None, ["start"]) in bot.commands

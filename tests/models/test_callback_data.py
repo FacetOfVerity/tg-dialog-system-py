@@ -36,3 +36,10 @@ def test_parse_too_few_parts_is_error():
 
 def test_parse_bad_version_is_error():
     assert CallbackData.parse("V9:pizza:confirm").is_error()
+
+
+def test_parse_payload_with_embedded_separator():
+    """Payload containing ':' must not be truncated."""
+    result = CallbackData.parse("V1:pizza:size:a:b")
+    assert result.is_ok()
+    assert result.ok.payload == "a:b"

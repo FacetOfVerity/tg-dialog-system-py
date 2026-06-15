@@ -20,7 +20,9 @@ async def set_bot_commands(bot: Any, provider: ChatMenuButtonProvider) -> None:
             commands, scope=BotCommandScopeDefault(), language_code=language_code
         )
 
-    default_commands = commands_by_language[_DEFAULT_LANGUAGE]
+    default_commands = commands_by_language.get(_DEFAULT_LANGUAGE)
+    if default_commands is None:
+        default_commands = next(iter(commands_by_language.values()), [])
     await bot.set_my_commands(
         default_commands, scope=BotCommandScopeDefault(), language_code=None
     )

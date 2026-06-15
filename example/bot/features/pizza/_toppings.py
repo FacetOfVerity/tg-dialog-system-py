@@ -17,6 +17,10 @@ _TOPPINGS = [
 def build_toppings_menu(
     version: Version, order: PizzaOrder, localization: LocalizationService, lang: str | None
 ) -> MenuGrid:
+    # The active flow passes Version.V1 (no topping limit).  The Version.V2
+    # toggle_topping handler (max-3 toppings) is registered in the same
+    # registry to demonstrate coexistence of multiple callback API versions:
+    # it is reachable by emitting a "V2:pizza:toggle_topping" callback.
     def label(value: str, key: MessageKey) -> str:
         text = localization.get(key, lang)
         return f"✅ {text}" if value in order.toppings else text

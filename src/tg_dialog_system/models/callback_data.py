@@ -46,7 +46,7 @@ class CallbackData:
                 "Telegram.Routing.InvalidCallbackData", "Callback data cannot be empty"
             )])
 
-        parts = data.split(CallbackData.SEPARATOR)
+        parts = data.split(CallbackData.SEPARATOR, 3)
         if len(parts) < 3:
             return Err([errors.failure(
                 "Telegram.Routing.InvalidCallbackData", "Callback data is malformed"

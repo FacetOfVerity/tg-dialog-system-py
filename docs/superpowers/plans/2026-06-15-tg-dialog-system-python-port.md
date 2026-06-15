@@ -720,6 +720,10 @@ class ReplyKeyboardBuilder:
         return self
 
     def add_row(self, *texts: str | ReplyKeyboardButton) -> ReplyKeyboardBuilder:
+        # Drop a trailing empty row left by new_row() before appending this one,
+        # so `new_row().add_row(...)` does not produce a phantom empty row.
+        if self._rows and not self._rows[-1]:
+            self._rows.pop()
         row = [t if isinstance(t, ReplyKeyboardButton) else ReplyKeyboardButton(t) for t in texts]
         self._rows.append(row)
         return self

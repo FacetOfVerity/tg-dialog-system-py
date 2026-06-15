@@ -14,14 +14,84 @@ Python port of the .NET `tg-dialog-system`.
 - Polling host with startup retry and per-language command initialization
 - Dependency injection by parameter name
 
-## Install
+Distribution name `tg-dialog-system`, import package `tg_dialog_system`. Requires Python ≥ 3.12.
+Dependencies (`aiogram`, `expression`, `pydantic-settings`) are pulled in automatically.
+
+## Use in another project
+
+The package is not on PyPI yet, so install it from a local path, from git, or from a built wheel.
 
 ```bash
-uv venv
-uv pip install -e ".[dev]"
+# From a local checkout (uv)
+uv add /path/to/tg-dialog-system-py
+# editable, so framework edits are picked up immediately:
+uv pip install -e /path/to/tg-dialog-system-py
+
+# From git (after pushing this repo to a remote)
+uv add "git+https://github.com/<you>/tg-dialog-system-py.git@v0.1.0"
+# pip equivalent:
+pip install "tg-dialog-system @ git+https://github.com/<you>/tg-dialog-system-py.git@main"
+
+# Build a wheel and install it anywhere
+uv build                                              # -> dist/tg_dialog_system-0.1.0-py3-none-any.whl
+uv pip install dist/tg_dialog_system-0.1.0-py3-none-any.whl
 ```
 
-## Quick start
+Then write handlers, implement the three extension protocols, and wire everything with `TgDialogBot`:
+
+```python
+# myproject/features/start.py
+from expression import Ok
+from tg_dialog_system import command_route, MessageContext, TextMessageReply
+from tg_dialog_system.models.replies import ReplyResult
+
+
+@command_route("/start")
+async def start(ctx: MessageContext) -> ReplyResult:
+    return Ok(TextMessageReply("Welcome!"))
+```
+
+```python
+# myproject/main.py
+import asyncio
+
+import myproject.features  # package containing your decorated handlers
+from tg_dialog_system import TgDialogBot, TelegramSettings
+
+
+async def main() -> None:
+    settings = TelegramSettings()  # reads TELEGRAM__BOT_TOKEN from env / .env
+
+    bot = TgDialogBot(
+        settings=settings,
+        chat_menu_button_provider=MyMenuProvider(),       # implement the 3 protocols
+        arbitrary_text_message_handler=MyTextHandler(),   # from tg_dialog_system.protocols
+        errors_processor=MyErrorsProcessor(None),
+        dependencies={"db": db},                          # injected into handlers by parameter name
+        handler_packages=[myproject.features],            # discovered + registered at startup
+    )
+    # The errors processor needs the live Bot that TgDialogBot creates internally:
+    bot._dispatcher._errors = MyErrorsProcessor(bot.aiogram_bot)
+    await bot.run()
+
+
+asyncio.run(main())
+```
+
+Key points:
+
+- Handlers are plain async functions decorated with `@command_route` / `@callback_route`. Pass the
+  package(s) holding them as `handler_packages`; `discover_handlers` imports every submodule so the
+  decorators register the routes.
+- The first handler parameter is always the context (`MessageContext` / `CallbackContext`); every other
+  parameter is resolved **by name** from `dependencies`.
+- Consumers implement three `Protocol`s from `tg_dialog_system.protocols`: `ChatMenuButtonProvider`,
+  `ArbitraryTextMessageHandler`, `BotErrorsProcessor`.
+
+The `example/` directory is a complete, runnable reference (pizza-ordering + contact bot) you can copy
+as a starting template.
+
+## Quick start (standalone, in this repo)
 
 ```python
 from expression import Ok
@@ -43,9 +113,11 @@ cp .env.example .env   # set TELEGRAM__BOT_TOKEN
 uv run python -m example.bot.main
 ```
 
-## Test
+## Develop on the framework itself
 
 ```bash
+uv venv
+uv pip install -e ".[dev]"
 uv run pytest
 uv run ruff check src tests example
 ```
